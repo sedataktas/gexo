@@ -15,10 +15,10 @@ import (
 var origTermios unix.Termios
 
 func main() {
+	defer disableRawMode()
 	enableRawMode()
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		var err error
 		// read one byte
 		c, err := reader.ReadByte()
 		if err != nil {
@@ -26,9 +26,10 @@ func main() {
 				fmt.Println("END OF FILE")
 			}
 		}
-		// press q to quit.
+
 		if c == 'q' {
-			os.Exit(0)
+			disableRawMode()
+			os.Exit(1)
 		}
 
 		if unicode.IsControl(rune(c)) {
@@ -101,6 +102,10 @@ func enableRawMode() {
 	// and the newline moves the cursor down a line, scrolling the screen if necessary
 	// OPOST diasble this
 	raw.Oflag &^= unix.OPOST
+
+	// TODO : search in google
+	raw.Cc[unix.VMIN] = 1
+	raw.Cc[unix.VTIME] = 0
 	// Apply terminal attributes
 	err = unix.IoctlSetTermios(int(os.Stdin.Fd()), unix.TIOCSETA, &raw)
 	if err != nil {
