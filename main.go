@@ -17,6 +17,7 @@ func main() {
 	enableRawMode()
 	reader := bufio.NewReader(os.Stdin)
 	for {
+		editorRefreshScreen()
 		c := editorReadKey(reader)
 		editorProcessKeypress(c)
 	}
@@ -55,5 +56,23 @@ func editorProcessKeypress(c byte) {
 }
 
 func editorRefreshScreen() {
+	writer := bufio.NewWriter(os.Stdout)
+	// The first byte is \x1b, which is the escape character, or 27 in decimal
+	// The other three bytes are [2J.
+	// We are writing an escape sequence to the terminal.
+	//Escape sequences always start with an escape character (27) followed by a [ character.
+	//Escape sequences instruct the terminal to do various text formatting tasks,
+	//such as coloring text, moving the cursor around, and clearing parts of the screen.
 
+	//We are using the J command (Erase In Display) to clear the screen.
+	//Escape sequence commands take arguments, which come before the command.
+	//In this case the argument is 2, which says to clear the entire screen.
+	//<esc>[1J would clear the screen up to where the cursor is,
+	//and <esc>[0J would clear the screen from the cursor up to the end of the screen.
+	//Also, 0 is the default argument for J, s
+	//o just <esc>[J by itself would also clear the screen from the cursor to the end.
+	_, err := writer.Write([]byte("\x1b[2J"))
+	if err != nil {
+		panic(err)
+	}
 }
