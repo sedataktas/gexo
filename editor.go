@@ -80,7 +80,7 @@ func getCursorToBegin() {
 }
 
 func editorDrawRows() {
-	for i := 0; i < 24; i++ {
+	for i := 0; i < E.screenRows; i++ {
 		_, err := fmt.Print("~\r\n")
 		if err != nil {
 			panic(err)

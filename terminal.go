@@ -79,7 +79,7 @@ func enableRawMode() {
 }
 
 func disableRawMode() {
-	err := unix.IoctlSetTermios(int(os.Stdin.Fd()), unix.TIOCSETA, &origTermios)
+	err := unix.IoctlSetTermios(int(os.Stdin.Fd()), unix.TIOCSETA, &E.origTermios)
 	if err != nil {
 		panic(err)
 	}
