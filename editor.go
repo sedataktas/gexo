@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+var buf string
+
 func editorReadKey(reader *bufio.Reader) byte {
 	// read one byte
 	c, err := reader.ReadByte()
@@ -44,6 +46,11 @@ func editorRefreshScreen() {
 	editorDrawRows()
 
 	getCursorToBegin()
+
+	_, err := fmt.Print(buf)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func clearEntireScreen() {
@@ -61,10 +68,7 @@ func clearEntireScreen() {
 	//and <esc>[0J would clear the screen from the cursor up to the end of the screen.
 	//Also, 0 is the default argument for J, s
 	//o just <esc>[J by itself would also clear the screen from the cursor to the end.
-	_, err := fmt.Print("\x1b[2J")
-	if err != nil {
-		panic(err)
-	}
+	buf += "\x1b[2J"
 }
 
 func getCursorToBegin() {
@@ -73,18 +77,14 @@ func getCursorToBegin() {
 	//that we’re ready to draw the editor interface from top to bottom.
 	// For this we use H command for take the cursor to the first row and first column
 	//_, err := writer.Write([]byte("\x1b[H"))
-	_, err := fmt.Print("\x1b[H")
-	if err != nil {
-		panic(err)
-	}
+	buf += "\x1b[H"
 }
 
 func editorDrawRows() {
 	for i := 0; i < E.screenRows; i++ {
-		_, err := fmt.Print("~\r\n")
-		if err != nil {
-			panic(err)
+		buf += "~"
+		if i < E.screenRows-1 {
+			buf += "\r\n"
 		}
 	}
-
 }

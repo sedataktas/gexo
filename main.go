@@ -12,7 +12,9 @@ type EditorConfig struct {
 	origTermios unix.Termios
 }
 
-var E EditorConfig
+var (
+	E EditorConfig
+)
 
 func init() {
 	w, err := unix.IoctlGetWinsize(int(os.Stdin.Fd()), unix.TIOCGWINSZ)
