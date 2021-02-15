@@ -41,7 +41,7 @@ func editorProcessKeypress(c byte) {
 
 func editorRefreshScreen() {
 	hideCursor()
-	clearEntireScreen()
+	//clearEntireScreen()
 	getCursorToBegin()
 
 	editorDrawRows()
@@ -94,7 +94,11 @@ func getCursorToBegin() {
 
 func editorDrawRows() {
 	for i := 0; i < E.screenRows; i++ {
+		// write tilde sign to each row
 		buf += "~"
+
+		// erase in line : https://vt100.net/docs/vt100-ug/chapter3.html#EL, default : 0
+		buf += "\x1b[K"
 		if i < E.screenRows-1 {
 			buf += "\r\n"
 		}
