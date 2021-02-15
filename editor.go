@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+const version = "0.0.1"
+
 var buf string
 
 func editorReadKey(reader *bufio.Reader) byte {
@@ -94,8 +96,18 @@ func getCursorToBegin() {
 
 func editorDrawRows() {
 	for i := 0; i < E.screenRows; i++ {
-		// write tilde sign to each row
-		buf += "~"
+		if i == E.screenRows/3 {
+			welcomeMsg := fmt.Sprintf("gexo editor -- version %s", version)
+			buf += "~" + " "
+			padding := (E.screenCols - len(welcomeMsg)) / 2
+			for j := 0; j <= padding; j++ {
+				buf += " "
+			}
+			buf += welcomeMsg
+		} else {
+			// write tilde sign to each row
+			buf += "~"
+		}
 
 		// erase in line : https://vt100.net/docs/vt100-ug/chapter3.html#EL, default : 0
 		buf += "\x1b[K"
