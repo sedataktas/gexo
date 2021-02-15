@@ -40,17 +40,29 @@ func editorProcessKeypress(c byte) {
 }
 
 func editorRefreshScreen() {
+	hideCursor()
 	clearEntireScreen()
 	getCursorToBegin()
 
 	editorDrawRows()
 
 	getCursorToBegin()
+	showCursor()
 
 	_, err := fmt.Print(buf)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func hideCursor() {
+	// l --> reset mode
+	buf += "\x1b[?25l"
+}
+
+func showCursor() {
+	// h --> set mode
+	buf += "\x1b[?25h"
 }
 
 func clearEntireScreen() {
