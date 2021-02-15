@@ -7,6 +7,8 @@ import (
 )
 
 type EditorConfig struct {
+	cx          int
+	cy          int
 	screenRows  int
 	screenCols  int
 	origTermios unix.Termios
@@ -21,6 +23,10 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	// set cursor initial positions to 0
+	E.cx = 0
+	E.cy = 0
 
 	E.screenCols = int(w.Col)
 	E.screenRows = int(w.Row)
@@ -41,7 +47,8 @@ func main() {
 	}
 }
 
-func ctrlKey(c byte) byte {
+func ctrlKey(c byte) int {
 	// The CTRL_KEY macro bitwise-ANDs a character with the value 00011111, in binary.
-	return (c) & 0x1f
+	ctrlKey := (c) & 0x1f
+	return int(ctrlKey)
 }

@@ -7,11 +7,18 @@ import (
 	"os"
 )
 
+const (
+	ArrowLeft int = iota + 1000
+	ArrowRight
+	ArrowUp
+	ArrowDown
+)
+
 const version = "0.0.1"
 
 var buf string
 
-func editorReadKey(reader *bufio.Reader) byte {
+func editorReadKey(reader *bufio.Reader) int {
 	// read one byte
 	c, err := reader.ReadByte()
 	if err != nil {
@@ -19,26 +26,45 @@ func editorReadKey(reader *bufio.Reader) byte {
 			fmt.Println("END OF FILE")
 		}
 	}
-	return c
+
+	var seq [2]byte
+	// Arrow keys begin with escape character
+	// then comes '[', then followed 'A', 'B', 'C', 'D'
+	if c == '\x1b' {
+		// read 2 more bytes
+		_, err := reader.Read(seq[:])
+		if err != nil {
+			panic(err)
+		}
+
+		if seq[0] == '[' {
+			switch seq[1] {
+			case 'A':
+				return ArrowUp
+			case 'B':
+				return ArrowDown
+			case 'C':
+				return ArrowRight
+			case 'D':
+				return ArrowLeft
+			}
+		}
+		return '\x1b'
+	}
+	return int(c)
 }
 
-func editorProcessKeypress(c byte) {
+func editorProcessKeypress(c int) {
 	switch c {
 	case ctrlKey('q'):
 		clearEntireScreen()
 		getCursorToBegin()
 		disableRawMode()
 		os.Exit(1)
+	case ArrowUp, ArrowDown, ArrowLeft, ArrowRight:
+		editorMoveCursor(c)
 		break
 	}
-
-	/*
-		if unicode.IsControl(rune(c)) {
-			fmt.Printf("%d\r\n", c)
-		} else {
-			fmt.Printf("%d ('%c')\r\n", c, c)
-		}
-	*/
 }
 
 func editorRefreshScreen() {
@@ -47,8 +73,8 @@ func editorRefreshScreen() {
 	getCursorToBegin()
 
 	editorDrawRows()
+	setCursorPosition()
 
-	getCursorToBegin()
 	showCursor()
 
 	_, err := fmt.Print(buf)
@@ -114,5 +140,34 @@ func editorDrawRows() {
 		if i < E.screenRows-1 {
 			buf += "\r\n"
 		}
+	}
+}
+
+func setCursorPosition() {
+	buf += fmt.Sprintf("\x1b[%d;%dH", E.cy+1, E.cx+1)
+}
+
+func editorMoveCursor(key int) {
+	switch key {
+	case ArrowLeft:
+		if E.cx != 0 {
+			E.cx--
+		}
+		break
+	case ArrowRight:
+		if E.cx != E.screenCols-1 {
+			E.cx++
+		}
+		break
+	case ArrowUp:
+		if E.cy != 0 {
+			E.cy--
+		}
+		break
+	case ArrowDown:
+		if E.cy != E.screenRows-1 {
+			E.cy++
+		}
+		break
 	}
 }
