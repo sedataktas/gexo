@@ -8,10 +8,15 @@ import (
 )
 
 const (
+	// sett random number, but number is bigger than character's limit
 	ArrowLeft int = iota + 1000
 	ArrowRight
 	ArrowUp
 	ArrowDown
+	PageUp
+	PageDown
+	HomeKey
+	EndKey
 )
 
 const version = "0.0.1"
@@ -27,7 +32,7 @@ func editorReadKey(reader *bufio.Reader) int {
 		}
 	}
 
-	var seq [2]byte
+	var seq [3]byte
 	// Arrow keys begin with escape character
 	// then comes '[', then followed 'A', 'B', 'C', 'D'
 	if c == '\x1b' {
@@ -38,15 +43,52 @@ func editorReadKey(reader *bufio.Reader) int {
 		}
 
 		if seq[0] == '[' {
-			switch seq[1] {
-			case 'A':
-				return ArrowUp
-			case 'B':
-				return ArrowDown
-			case 'C':
-				return ArrowRight
-			case 'D':
-				return ArrowLeft
+			// Page Up is sent as <esc>[5~ and Page Down is sent as <esc>[6~.
+			// The Home key could be sent as <esc>[1~, <esc>[7~, <esc>[H, or <esc>OH.
+			// Similarly, the End key could be sent as <esc>[4~, <esc>[8~, <esc>[F, or <esc>OF.
+			if seq[1] >= '0' && seq[1] <= '9' {
+				if &seq[2] == nil {
+					return '\x1b'
+				}
+
+				if seq[2] == '~' {
+					switch seq[1] {
+					case '1':
+						return HomeKey
+					case '4':
+						return EndKey
+					case '5':
+						return PageUp
+					case '6':
+						return PageDown
+					case '7':
+						return HomeKey
+					case '8':
+						return EndKey
+					}
+				}
+			} else if seq[0] == 'O' {
+				switch seq[1] {
+				case 'H':
+					return HomeKey
+				case 'F':
+					return EndKey
+				}
+			} else {
+				switch seq[1] {
+				case 'A':
+					return ArrowUp
+				case 'B':
+					return ArrowDown
+				case 'C':
+					return ArrowRight
+				case 'D':
+					return ArrowLeft
+				case 'H':
+					return HomeKey
+				case 'F':
+					return EndKey
+				}
 			}
 		}
 		return '\x1b'
@@ -64,12 +106,25 @@ func editorProcessKeypress(c int) {
 	case ArrowUp, ArrowDown, ArrowLeft, ArrowRight:
 		editorMoveCursor(c)
 		break
+	case PageDown:
+		for i := 0; i < E.screenRows; i++ {
+			editorMoveCursor(ArrowDown)
+		}
+	case PageUp:
+		for i := 0; i < E.screenRows; i++ {
+			editorMoveCursor(ArrowUp)
+		}
+	case HomeKey:
+		E.cx = 0
+		break
+	case EndKey:
+		E.cx = E.screenCols - 1
+		break
 	}
 }
 
 func editorRefreshScreen() {
 	hideCursor()
-	//clearEntireScreen()
 	getCursorToBegin()
 
 	editorDrawRows()
