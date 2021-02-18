@@ -16,6 +16,7 @@ type Erow struct {
 type EditorConfig struct {
 	cx          int
 	cy          int
+	rowOff      int
 	screenRows  int
 	screenCols  int
 	numRows     int
@@ -36,6 +37,7 @@ func init() {
 	// set cursor initial positions to 0
 	E.cx = 0
 	E.cy = 0
+	E.rowOff = 0
 	E.numRows = 0
 	E.row = nil
 	E.screenCols = int(w.Col)

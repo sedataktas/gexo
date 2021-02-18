@@ -128,6 +128,7 @@ func editorProcessKeypress(c int) {
 }
 
 func editorRefreshScreen() {
+	editorScroll()
 	hideCursor()
 	getCursorToBegin()
 
@@ -181,21 +182,26 @@ func getCursorToBegin() {
 
 func editorDrawRows() {
 	for i := 0; i < E.screenRows; i++ {
-		if i >= E.numRows {
-			if E.numRows == 0 && i == E.screenRows/3 {
-				welcomeMsg := fmt.Sprintf("gexo editor -- version %s", version)
-				buf += "~" + " "
-				padding := (E.screenCols - len(welcomeMsg)) / 2
-				for j := 0; j <= padding; j++ {
-					buf += " "
+		fileRow := i + E.rowOff
+		if fileRow >= E.numRows {
+			if i >= E.numRows {
+				if E.numRows == 0 && i == E.screenRows/3 {
+					welcomeMsg := fmt.Sprintf("gexo editor -- version %s", version)
+					buf += "~" + " "
+					padding := (E.screenCols - len(welcomeMsg)) / 2
+					for j := 0; j <= padding; j++ {
+						buf += " "
+					}
+					buf += welcomeMsg
+				} else {
+					// write tilde sign to each row
+					buf += "~"
 				}
-				buf += welcomeMsg
 			} else {
-				// write tilde sign to each row
-				buf += "~"
+				buf += *E.row[i].bytes
 			}
 		} else {
-			buf += *E.row[i].bytes
+			buf += *E.row[fileRow].bytes
 		}
 
 		// erase in line : https://vt100.net/docs/vt100-ug/chapter3.html#EL, default : 0
@@ -207,7 +213,7 @@ func editorDrawRows() {
 }
 
 func setCursorPosition() {
-	buf += fmt.Sprintf("\x1b[%d;%dH", E.cy+1, E.cx+1)
+	buf += fmt.Sprintf("\x1b[%d;%dH", (E.cy-E.rowOff)+1, E.cx+1)
 }
 
 func editorMoveCursor(key int) {
@@ -228,9 +234,18 @@ func editorMoveCursor(key int) {
 		}
 		break
 	case ArrowDown:
-		if E.cy != E.screenRows-1 {
+		if E.cy < E.numRows {
 			E.cy++
 		}
 		break
+	}
+}
+
+func editorScroll() {
+	if E.cy < E.rowOff {
+		E.rowOff = E.cy
+	}
+	if E.cy >= E.rowOff+E.screenRows {
+		E.rowOff = E.cy - E.screenRows + 1
 	}
 }
