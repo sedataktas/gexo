@@ -6,11 +6,20 @@ import (
 	"os"
 )
 
+// Erow stands for “editor row”,
+//and stores a line of text as a pointer to character data and a length
+type Erow struct {
+	size  int
+	bytes *string
+}
+
 type EditorConfig struct {
 	cx          int
 	cy          int
 	screenRows  int
 	screenCols  int
+	numRows     int
+	row         Erow
 	origTermios unix.Termios
 }
 
@@ -27,7 +36,7 @@ func init() {
 	// set cursor initial positions to 0
 	E.cx = 0
 	E.cy = 0
-
+	E.numRows = 0
 	E.screenCols = int(w.Col)
 	E.screenRows = int(w.Row)
 }
@@ -40,6 +49,11 @@ func main() {
 	defer disableRawMode()
 
 	enableRawMode()
+	fileName := os.Args[1]
+	if len(fileName) > 0 {
+		editorOpen(fileName)
+	}
+
 	for {
 		editorRefreshScreen()
 		c := editorReadKey(reader)

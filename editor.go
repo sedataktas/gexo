@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	// sett random number, but number is bigger than character's limit
+	// set random number, but number is bigger than character's limit
 	ArrowLeft int = iota + 1000
 	ArrowRight
 	ArrowUp
@@ -17,6 +17,7 @@ const (
 	PageDown
 	HomeKey
 	EndKey
+	DeleteKEy
 )
 
 const version = "0.0.1"
@@ -46,6 +47,7 @@ func editorReadKey(reader *bufio.Reader) int {
 			// Page Up is sent as <esc>[5~ and Page Down is sent as <esc>[6~.
 			// The Home key could be sent as <esc>[1~, <esc>[7~, <esc>[H, or <esc>OH.
 			// Similarly, the End key could be sent as <esc>[4~, <esc>[8~, <esc>[F, or <esc>OF.
+			// Delete key : It simply sends the escape sequence <esc>[3~
 			if seq[1] >= '0' && seq[1] <= '9' {
 				if &seq[2] == nil {
 					return '\x1b'
@@ -55,6 +57,8 @@ func editorReadKey(reader *bufio.Reader) int {
 					switch seq[1] {
 					case '1':
 						return HomeKey
+					case '3':
+						return DeleteKEy
 					case '4':
 						return EndKey
 					case '5':
@@ -177,17 +181,21 @@ func getCursorToBegin() {
 
 func editorDrawRows() {
 	for i := 0; i < E.screenRows; i++ {
-		if i == E.screenRows/3 {
-			welcomeMsg := fmt.Sprintf("gexo editor -- version %s", version)
-			buf += "~" + " "
-			padding := (E.screenCols - len(welcomeMsg)) / 2
-			for j := 0; j <= padding; j++ {
-				buf += " "
+		if i >= E.numRows {
+			if i == E.screenRows/3 {
+				welcomeMsg := fmt.Sprintf("gexo editor -- version %s", version)
+				buf += "~" + " "
+				padding := (E.screenCols - len(welcomeMsg)) / 2
+				for j := 0; j <= padding; j++ {
+					buf += " "
+				}
+				buf += welcomeMsg
+			} else {
+				// write tilde sign to each row
+				buf += "~"
 			}
-			buf += welcomeMsg
 		} else {
-			// write tilde sign to each row
-			buf += "~"
+			buf += *E.row.bytes
 		}
 
 		// erase in line : https://vt100.net/docs/vt100-ug/chapter3.html#EL, default : 0
