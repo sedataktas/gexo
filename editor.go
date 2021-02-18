@@ -182,7 +182,7 @@ func getCursorToBegin() {
 func editorDrawRows() {
 	for i := 0; i < E.screenRows; i++ {
 		if i >= E.numRows {
-			if i == E.screenRows/3 {
+			if E.numRows == 0 && i == E.screenRows/3 {
 				welcomeMsg := fmt.Sprintf("gexo editor -- version %s", version)
 				buf += "~" + " "
 				padding := (E.screenCols - len(welcomeMsg)) / 2
@@ -195,7 +195,7 @@ func editorDrawRows() {
 				buf += "~"
 			}
 		} else {
-			buf += *E.row.bytes
+			buf += *E.row[i].bytes
 		}
 
 		// erase in line : https://vt100.net/docs/vt100-ug/chapter3.html#EL, default : 0

@@ -19,7 +19,7 @@ type EditorConfig struct {
 	screenRows  int
 	screenCols  int
 	numRows     int
-	row         Erow
+	row         []Erow
 	origTermios unix.Termios
 }
 
@@ -37,6 +37,7 @@ func init() {
 	E.cx = 0
 	E.cy = 0
 	E.numRows = 0
+	E.row = nil
 	E.screenCols = int(w.Col)
 	E.screenRows = int(w.Row)
 }
@@ -49,8 +50,9 @@ func main() {
 	defer disableRawMode()
 
 	enableRawMode()
-	fileName := os.Args[1]
-	if len(fileName) > 0 {
+
+	if len(os.Args) > 1 {
+		fileName := os.Args[1]
 		editorOpen(fileName)
 	}
 
