@@ -15,13 +15,18 @@ func editorOpen(fileName string) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		t := scanner.Text()
+		if t != "" {
+			byteArray := []byte(t)
+			r := Erow{
+				size:   len(byteArray),
+				rsize:  0,
+				bytes:  byteArray,
+				render: nil,
+			}
 
-		r := Erow{
-			size:  len(t),
-			bytes: &t,
+			E.row = append(E.row, r)
+			E.numRows++
+			editorUpdateRow(&E.row[E.numRows])
 		}
-
-		E.row = append(E.row, r)
-		E.numRows++
 	}
 }

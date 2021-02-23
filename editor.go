@@ -22,7 +22,7 @@ const (
 
 const version = "0.0.1"
 
-var buf string
+var buf []byte
 
 func editorReadKey(reader *bufio.Reader) int {
 	// read one byte
@@ -137,7 +137,7 @@ func editorRefreshScreen() {
 
 	showCursor()
 
-	_, err := fmt.Print(buf)
+	_, err := fmt.Print(string(buf))
 	if err != nil {
 		panic(err)
 	}
@@ -145,12 +145,12 @@ func editorRefreshScreen() {
 
 func hideCursor() {
 	// l --> reset mode
-	buf += "\x1b[?25l"
+	buf = append(buf, []byte("\x1b[?25l")...)
 }
 
 func showCursor() {
 	// h --> set mode
-	buf += "\x1b[?25h"
+	buf = append(buf, []byte("\x1b[?25h")...)
 }
 
 func clearEntireScreen() {
@@ -168,7 +168,7 @@ func clearEntireScreen() {
 	//and <esc>[0J would clear the screen from the cursor up to the end of the screen.
 	//Also, 0 is the default argument for J, s
 	//o just <esc>[J by itself would also clear the screen from the cursor to the end.
-	buf += "\x1b[2J"
+	buf = append(buf, []byte("\x1b[2J")...)
 }
 
 func getCursorToBegin() {
@@ -177,55 +177,76 @@ func getCursorToBegin() {
 	//that we’re ready to draw the editor interface from top to bottom.
 	// For this we use H command for take the cursor to the first row and first column
 	//_, err := writer.Write([]byte("\x1b[H"))
-	buf += "\x1b[H"
+	buf = append(buf, []byte("\x1b[H")...)
 }
 
 func editorDrawRows() {
 	for i := 0; i < E.screenRows; i++ {
 		fileRow := i + E.rowOff
 		if fileRow >= E.numRows {
-			if i >= E.numRows {
-				if E.numRows == 0 && i == E.screenRows/3 {
-					welcomeMsg := fmt.Sprintf("gexo editor -- version %s", version)
-					buf += "~" + " "
-					padding := (E.screenCols - len(welcomeMsg)) / 2
-					for j := 0; j <= padding; j++ {
-						buf += " "
-					}
-					buf += welcomeMsg
-				} else {
-					// write tilde sign to each row
-					buf += "~"
+			if E.numRows == 0 && i == E.screenRows/3 {
+				welcomeMsg := fmt.Sprintf("gexo editor -- version %s", version)
+				buf = append(buf, '~', ' ')
+				padding := (E.screenCols - len(welcomeMsg)) / 2
+				for j := 0; j <= padding; j++ {
+					buf = append(buf, ' ')
 				}
+				msgByteArr := []byte(welcomeMsg)
+				buf = append(buf, msgByteArr...)
 			} else {
-				buf += *E.row[i].bytes
+				// write tilde sign to each row
+				buf = append(buf, '~')
 			}
 		} else {
-			buf += *E.row[fileRow].bytes
+			len := E.row[fileRow].rsize - E.colOff
+			if len < 0 {
+				len = 0
+			}
+			if len > E.screenCols {
+				len = E.screenCols
+			}
+
+			buf = append(buf, E.row[fileRow].render...)
 		}
 
 		// erase in line : https://vt100.net/docs/vt100-ug/chapter3.html#EL, default : 0
-		buf += "\x1b[K"
+
+		buf = append(buf, []byte("\x1b[K")...)
 		if i < E.screenRows-1 {
-			buf += "\r\n"
+			buf = append(buf, []byte("\r\n")...)
 		}
 	}
 }
 
 func setCursorPosition() {
-	buf += fmt.Sprintf("\x1b[%d;%dH", (E.cy-E.rowOff)+1, E.cx+1)
+	cur := fmt.Sprintf("\x1b[%d;%dH", (E.cy-E.rowOff)+1, (E.rx-E.colOff)+1)
+	buf = append(buf, []byte(cur)...)
+
 }
 
 func editorMoveCursor(key int) {
+	var row *Erow
+	if E.cy >= E.numRows {
+		row = nil
+	} else {
+		row = &E.row[E.cy]
+	}
+
 	switch key {
 	case ArrowLeft:
 		if E.cx != 0 {
 			E.cx--
+		} else if E.cy > 0 {
+			E.cy--
+			E.cx = E.row[E.cy].size
 		}
 		break
 	case ArrowRight:
-		if E.cx != E.screenCols-1 {
+		if row != nil && E.cx < row.size {
 			E.cx++
+		} else if row != nil && E.cx == row.size {
+			E.cy++
+			E.cx = 0
 		}
 		break
 	case ArrowUp:
@@ -239,13 +260,120 @@ func editorMoveCursor(key int) {
 		}
 		break
 	}
+
+	if E.cy >= E.numRows {
+		row = nil
+	} else {
+		row = &E.row[E.cy]
+	}
+
+	rowLen := 0
+	if row != nil {
+		rowLen = row.size
+	}
+
+	if E.cx > rowLen {
+		E.cx = rowLen
+	}
 }
 
 func editorScroll() {
+	E.rx = E.cx
+
+	if E.cy < E.numRows {
+		E.rx = editorRowCxToRx(&E.row[E.cy], E.cx)
+	}
 	if E.cy < E.rowOff {
 		E.rowOff = E.cy
 	}
 	if E.cy >= E.rowOff+E.screenRows {
 		E.rowOff = E.cy - E.screenRows + 1
 	}
+
+	if E.rx < E.colOff {
+		E.colOff = E.rx
+	}
+	if E.rx >= E.colOff+E.screenCols {
+		E.colOff = E.rx - E.screenCols + 1
+	}
+}
+
+func editorAppendRow(bytes []byte, len int) {
+	at := E.numRows
+
+	E.row[at].size = len
+	E.row[at].bytes = bytes
+	E.row[at].bytes[len] = '\000'
+
+	E.row[at].rsize = 0
+	E.row[at].render = nil
+	editorUpdateRow(&E.row[at])
+}
+
+func editorUpdateRow(row *Erow) {
+	whiteSpace := 0
+	for j := 0; j < row.size; j++ {
+		if string(row.bytes[j]) == " " {
+			if len(row.bytes) > j+3 {
+				for i := 0; i < 3; i++ {
+					if string(row.bytes[j]) == " " {
+						j++
+						whiteSpace++
+					}
+				}
+			}
+			if whiteSpace == 3 {
+				row.render = append(row.render, ' ')
+			}
+			whiteSpace = 0
+		} else {
+			row.render = append(row.render, row.bytes[j])
+		}
+	}
+
+	/*
+		row.render = nil
+
+		idx := 0
+		for j :=0 ; j<row.size; j++ {
+			if string(row.bytes[j]) == " " {
+				if  len(row.bytes) > j+3{
+					for i:=0; i<3 ;i++ {
+						if string(row.bytes[j]) == " " {
+							whiteSpace++
+						}
+					}
+				}
+				j=j+3
+				if whiteSpace == 3 {
+					row.render = append(row.render, ' ')
+					for idx % 8 != 0 {
+						row.render[idx+1] = ' '
+					}
+				}
+
+			}else {
+				if len(row.render) > idx+1 {
+					row.render[idx+1] = row.bytes[j]
+				} else {
+					row.render = append(row.render, row.bytes[j])
+				}
+
+			}
+		}
+	*/
+	//row.render[idx] = '\000'
+	//row.rsize = idx
+}
+
+func editorRowCxToRx(row *Erow, cx int) int {
+	rx := 0
+
+	for j := 0; j < cx; j++ {
+		if row.bytes[j] == '\t' {
+			rx += 7 - (rx % 8)
+		}
+		rx++
+	}
+	return rx
 }
