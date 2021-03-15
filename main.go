@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"golang.org/x/sys/unix"
 	"os"
+	"time"
 )
 
 // Erow stands for “editor row”,
@@ -14,16 +15,18 @@ type Erow struct {
 }
 
 type EditorConfig struct {
-	cx          int
-	cy          int
-	rowOff      int
-	colOff      int
-	screenRows  int
-	screenCols  int
-	numRows     int
-	row         []Erow
-	fileName    string
-	origTermios unix.Termios
+	cx            int
+	cy            int
+	rowOff        int
+	colOff        int
+	screenRows    int
+	screenCols    int
+	numRows       int
+	row           []Erow
+	fileName      string
+	statusMsg     string
+	statusMsgTime time.Time
+	origTermios   unix.Termios
 }
 
 var (
@@ -44,6 +47,8 @@ func init() {
 	E.numRows = 0
 	E.row = nil
 	E.fileName = ""
+	E.statusMsg = ""
+	E.statusMsgTime = time.Time{}
 
 	E.screenCols = int(w.Col)
 	E.screenRows = int(w.Row) - 1
@@ -63,6 +68,8 @@ func main() {
 		E.fileName = fileName
 		editorOpen(fileName)
 	}
+
+	editorSetStatusMessage("HELP: Ctrl-Q = quit")
 
 	for {
 		editorRefreshScreen()

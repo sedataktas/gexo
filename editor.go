@@ -2,9 +2,11 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
+	"time"
 )
 
 const (
@@ -157,6 +159,7 @@ func editorRefreshScreen() {
 
 	editorDrawRows()
 	editorDrawStatusBar()
+	editorDrawMessageBar()
 	setCursorPosition()
 
 	showCursor()
@@ -362,4 +365,30 @@ func editorDrawStatusBar() {
 
 	//  <esc>[m switches back to normal formatting
 	buf = append(buf, "\x1b[m"...)
+	buf = append(buf, "\r\n"...)
+}
+
+func editorDrawMessageBar() {
+	buf = append(buf, "\x1b[K"...)
+	msgLen := len(E.statusMsg)
+	if msgLen > E.screenCols {
+		msgLen = E.screenCols
+	}
+
+	t := time.Now().Sub(E.statusMsgTime).Seconds()
+	if msgLen != 0 && t < 5 {
+		buf = append(buf, E.statusMsg...)
+	}
+}
+
+func editorSetStatusMessage(str ...string) {
+	var buffer bytes.Buffer
+
+	for _, s := range str {
+		buffer.WriteString(s)
+		buffer.WriteString(",")
+	}
+
+	E.statusMsg = buffer.String()
+	E.statusMsgTime = time.Now()
 }
