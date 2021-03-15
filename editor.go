@@ -110,14 +110,35 @@ func editorProcessKeypress(c int) {
 	case ArrowUp, ArrowDown, ArrowLeft, ArrowRight:
 		editorMoveCursor(c)
 		break
-	case PageDown:
-		for i := 0; i < E.screenRows; i++ {
-			editorMoveCursor(ArrowDown)
+		/*
+			case PageDown:
+				for i := 0; i < E.screenRows; i++ {
+					editorMoveCursor(ArrowDown)
+				}
+			case PageUp:
+				for i := 0; i < E.screenRows; i++ {
+					editorMoveCursor(ArrowUp)
+				}
+
+		*/
+	case PageDown, PageUp:
+		if c == PageUp {
+			E.cy = E.rowOff
+		} else if c == PageDown {
+			E.cy = E.rowOff + E.screenRows - 1
+			if E.cy > E.numRows {
+				E.cy = E.numRows
+			}
 		}
-	case PageUp:
-		for i := 0; i < E.screenRows; i++ {
-			editorMoveCursor(ArrowUp)
+
+		for i := E.screenRows; i > 0; i-- {
+			if c == PageUp {
+				editorMoveCursor(ArrowUp)
+			} else {
+				editorMoveCursor(ArrowDown)
+			}
 		}
+		break
 	case HomeKey:
 		E.cx = 0
 		break
@@ -129,10 +150,13 @@ func editorProcessKeypress(c int) {
 
 func editorRefreshScreen() {
 	editorScroll()
+
+	buf = nil
 	hideCursor()
 	getCursorToBegin()
 
 	editorDrawRows()
+	editorDrawStatusBar()
 	setCursorPosition()
 
 	showCursor()
@@ -141,6 +165,7 @@ func editorRefreshScreen() {
 	if err != nil {
 		panic(err)
 	}
+	buf = nil
 }
 
 func hideCursor() {
@@ -181,7 +206,7 @@ func getCursorToBegin() {
 }
 
 func editorDrawRows() {
-	for i := 0; i < E.screenRows; i++ {
+	for i := 0; i < E.screenRows-1; i++ {
 		fileRow := i + E.rowOff
 		if fileRow >= E.numRows {
 			if E.numRows == 0 && i == E.screenRows/3 {
@@ -198,30 +223,31 @@ func editorDrawRows() {
 				buf = append(buf, '~')
 			}
 		} else {
-			len := E.row[fileRow].rsize - E.colOff
+			//buf = append(buf, E.row[fileRow].bytes...)
+			len := E.row[fileRow].size - E.colOff
 			if len < 0 {
 				len = 0
 			}
+
 			if len > E.screenCols {
 				len = E.screenCols
 			}
 
-			buf = append(buf, E.row[fileRow].render...)
+			for i := 0; i < len; i++ {
+				buf = append(buf, E.row[fileRow].bytes[i])
+			}
 		}
 
 		// erase in line : https://vt100.net/docs/vt100-ug/chapter3.html#EL, default : 0
-
 		buf = append(buf, []byte("\x1b[K")...)
-		if i < E.screenRows-1 {
-			buf = append(buf, []byte("\r\n")...)
-		}
+		buf = append(buf, []byte("\r\n")...)
+
 	}
 }
 
 func setCursorPosition() {
-	cur := fmt.Sprintf("\x1b[%d;%dH", (E.cy-E.rowOff)+1, (E.rx-E.colOff)+1)
+	cur := fmt.Sprintf("\x1b[%d;%dH", (E.cy-E.rowOff)+1, (E.cx-E.colOff)+1)
 	buf = append(buf, []byte(cur)...)
-
 }
 
 func editorMoveCursor(key int) {
@@ -278,11 +304,6 @@ func editorMoveCursor(key int) {
 }
 
 func editorScroll() {
-	E.rx = E.cx
-
-	if E.cy < E.numRows {
-		E.rx = editorRowCxToRx(&E.row[E.cy], E.cx)
-	}
 	if E.cy < E.rowOff {
 		E.rowOff = E.cy
 	}
@@ -290,90 +311,55 @@ func editorScroll() {
 		E.rowOff = E.cy - E.screenRows + 1
 	}
 
-	if E.rx < E.colOff {
-		E.colOff = E.rx
+	if E.cx < E.colOff {
+		E.colOff = E.cx
 	}
-	if E.rx >= E.colOff+E.screenCols {
-		E.colOff = E.rx - E.screenCols + 1
+	if E.cx >= E.colOff+E.screenCols {
+		E.colOff = E.cx - E.screenCols + 1
 	}
 }
 
-func editorAppendRow(bytes []byte, len int) {
-	at := E.numRows
+func editorDrawStatusBar() {
+	//The m command (Select Graphic Rendition) causes the text printed
+	//after it to be printed with various possible attributes including
+	//bold (1),
+	//underscore (4),
+	//blink (5), and
+	//inverted colors (7). F
+	//or example, you could specify all of these attributes
+	//using the command <esc>[1;4;5;7m. An argument of 0 clears all attributes,
+	//and is the default argument, so we use <esc>[m to go back to normal text formatting.
+	buf = append(buf, "\x1b[7m"...)
 
-	E.row[at].size = len
-	E.row[at].bytes = bytes
-	E.row[at].bytes[len] = '\000'
+	statusBarMsgLeft := ""
+	if E.fileName == "" {
+		statusBarMsgLeft = fmt.Sprintf("%.20s - %d lines", "[No Name]", E.numRows)
+	} else {
+		statusBarMsgLeft = fmt.Sprintf("%.20s - %d lines", E.fileName, E.numRows)
+	}
 
-	E.row[at].rsize = 0
-	E.row[at].render = nil
-	editorUpdateRow(&E.row[at])
-}
+	statusBarMsgRight := fmt.Sprintf("%d/%d", E.cy+1, E.numRows)
+	rlen := len(statusBarMsgRight)
 
-func editorUpdateRow(row *Erow) {
-	whiteSpace := 0
-	for j := 0; j < row.size; j++ {
-		if string(row.bytes[j]) == " " {
-			if len(row.bytes) > j+3 {
-				for i := 0; i < 3; i++ {
-					if string(row.bytes[j]) == " " {
-						j++
-						whiteSpace++
-					}
-				}
-			}
-			if whiteSpace == 3 {
-				row.render = append(row.render, ' ')
-			}
-			whiteSpace = 0
+	len := len(statusBarMsgLeft)
+	if len > E.screenCols {
+		len = E.screenCols
+	}
+	for i := 0; i < len; i++ {
+		buf = append(buf, statusBarMsgLeft[i])
+	}
+
+	for len < E.screenCols {
+		if E.screenCols-len == rlen {
+			buf = append(buf, statusBarMsgRight...)
+			break
 		} else {
-			row.render = append(row.render, row.bytes[j])
+			// draw a blank white status bar of inverted space characters
+			buf = append(buf, " "...)
+			len++
 		}
 	}
 
-	/*
-		row.render = nil
-
-		idx := 0
-		for j :=0 ; j<row.size; j++ {
-			if string(row.bytes[j]) == " " {
-				if  len(row.bytes) > j+3{
-					for i:=0; i<3 ;i++ {
-						if string(row.bytes[j]) == " " {
-							whiteSpace++
-						}
-					}
-				}
-				j=j+3
-				if whiteSpace == 3 {
-					row.render = append(row.render, ' ')
-					for idx % 8 != 0 {
-						row.render[idx+1] = ' '
-					}
-				}
-
-			}else {
-				if len(row.render) > idx+1 {
-					row.render[idx+1] = row.bytes[j]
-				} else {
-					row.render = append(row.render, row.bytes[j])
-				}
-
-			}
-		}
-	*/
-	//row.render[idx] = '\000'
-	//row.rsize = idx
-}
-
-func editorRowCxToRx(row *Erow, cx int) int {
-	rx := 0
-
-	for j := 0; j < cx; j++ {
-		if row.bytes[j] == '\t' {
-			rx += 7 - (rx % 8)
-		}
-		rx++
-	}
-	return rx
+	//  <esc>[m switches back to normal formatting
+	buf = append(buf, "\x1b[m"...)
 }

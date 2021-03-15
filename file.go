@@ -17,16 +17,14 @@ func editorOpen(fileName string) {
 		t := scanner.Text()
 		if t != "" {
 			byteArray := []byte(t)
+			byteArray = append(byteArray, '\000')
 			r := Erow{
-				size:   len(byteArray),
-				rsize:  0,
-				bytes:  byteArray,
-				render: nil,
+				size:  len(byteArray),
+				bytes: byteArray,
 			}
 
 			E.row = append(E.row, r)
 			E.numRows++
-			editorUpdateRow(&E.row[E.numRows])
 		}
 	}
 }
