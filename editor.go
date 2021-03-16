@@ -147,6 +147,9 @@ func editorProcessKeypress(c int) {
 	case EndKey:
 		E.cx = E.screenCols - 1
 		break
+	default:
+		editorInsertChar(c)
+		break
 	}
 }
 
@@ -237,7 +240,8 @@ func editorDrawRows() {
 			}
 
 			for i := 0; i < len; i++ {
-				buf = append(buf, E.row[fileRow].bytes[i])
+				t := E
+				buf = append(buf, t.row[fileRow].bytes[i])
 			}
 		}
 
@@ -391,4 +395,43 @@ func editorSetStatusMessage(str ...string) {
 
 	E.statusMsg = buffer.String()
 	E.statusMsgTime = time.Now()
+}
+
+func editorRowInsertChar(row *Erow, at, c int) {
+	if at < 0 || at > row.size {
+		at = row.size
+	}
+
+	row.size++
+	row.bytes = insert(row.bytes, at, byte(c))
+	//row.bytes = append(row.bytes, byte(c))
+}
+
+func editorInsertChar(c int) {
+	if E.cy == E.numRows {
+		editorAppendRow([]byte(""))
+	}
+
+	editorRowInsertChar(&E.row[E.cy], E.cx, c)
+	E.cx++
+}
+
+func editorAppendRow(byteArray []byte) {
+	byteArray = append(byteArray, '\000')
+	r := Erow{
+		size:  len(byteArray),
+		bytes: byteArray,
+	}
+
+	E.row = append(E.row, r)
+	E.numRows++
+}
+
+func insert(a []byte, index int, value byte) []byte {
+	if len(a) == index { // nil or empty slice or after last element
+		return append(a, value)
+	}
+	a = append(a[:index+1], a[index:]...) // index < len(a)
+	a[index] = value
+	return a
 }
