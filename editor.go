@@ -10,6 +10,7 @@ import (
 )
 
 const (
+	BackSpace = 127
 	// set random number, but number is bigger than character's limit
 	ArrowLeft int = iota + 1000
 	ArrowRight
@@ -104,11 +105,17 @@ func editorReadKey(reader *bufio.Reader) int {
 
 func editorProcessKeypress(c int) {
 	switch c {
+	case '\r':
+		/* TODO */
+		break
 	case ctrlKey('q'):
 		clearEntireScreen()
 		getCursorToBegin()
 		disableRawMode()
 		os.Exit(1)
+	case ctrlKey('s'):
+		fileSave()
+		break
 	case ArrowUp, ArrowDown, ArrowLeft, ArrowRight:
 		editorMoveCursor(c)
 		break
@@ -146,6 +153,14 @@ func editorProcessKeypress(c int) {
 		break
 	case EndKey:
 		E.cx = E.screenCols - 1
+		break
+	case BackSpace:
+	case ctrlKey('h'):
+	case DeleteKEy:
+		/* TODO */
+		break
+	case ctrlKey('l'):
+	case '\x1b':
 		break
 	default:
 		editorInsertChar(c)
@@ -248,7 +263,6 @@ func editorDrawRows() {
 		// erase in line : https://vt100.net/docs/vt100-ug/chapter3.html#EL, default : 0
 		buf = append(buf, []byte("\x1b[K")...)
 		buf = append(buf, []byte("\r\n")...)
-
 	}
 }
 
@@ -417,7 +431,7 @@ func editorInsertChar(c int) {
 }
 
 func editorAppendRow(byteArray []byte) {
-	byteArray = append(byteArray, '\000')
+	//byteArray = append(byteArray, '\000')
 	r := Erow{
 		size:  len(byteArray),
 		bytes: byteArray,
@@ -425,6 +439,18 @@ func editorAppendRow(byteArray []byte) {
 
 	E.row = append(E.row, r)
 	E.numRows++
+}
+
+func editorRowsToString() string {
+	var buf string
+	for _, row := range E.row {
+		for _, r := range row.bytes {
+			fmt.Println(string(r))
+			buf += string(r)
+		}
+		buf += string('\n')
+	}
+	return buf
 }
 
 func insert(a []byte, index int, value byte) []byte {

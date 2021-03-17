@@ -69,7 +69,7 @@ func main() {
 		editorOpen(fileName)
 	}
 
-	editorSetStatusMessage("HELP: Ctrl-Q = quit")
+	editorSetStatusMessage("HELP: Ctrl-S = save | Ctrl-Q = quit")
 
 	for {
 		editorRefreshScreen()
