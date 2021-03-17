@@ -352,13 +352,7 @@ func editorDrawStatusBar() {
 	//and is the default argument, so we use <esc>[m to go back to normal text formatting.
 	buf = append(buf, "\x1b[7m"...)
 
-	statusBarMsgLeft := ""
-	if E.fileName == "" {
-		statusBarMsgLeft = fmt.Sprintf("%.20s - %d lines", "[No Name]", E.numRows)
-	} else {
-		statusBarMsgLeft = fmt.Sprintf("%.20s - %d lines", E.fileName, E.numRows)
-	}
-
+	statusBarMsgLeft := getStatusBarMsgLeft()
 	statusBarMsgRight := fmt.Sprintf("%d/%d", E.cy+1, E.numRows)
 	rlen := len(statusBarMsgRight)
 
@@ -418,6 +412,7 @@ func editorRowInsertChar(row *Erow, at, c int) {
 
 	row.size++
 	row.bytes = insert(row.bytes, at, byte(c))
+	E.dirty++
 	//row.bytes = append(row.bytes, byte(c))
 }
 
@@ -431,7 +426,6 @@ func editorInsertChar(c int) {
 }
 
 func editorAppendRow(byteArray []byte) {
-	//byteArray = append(byteArray, '\000')
 	r := Erow{
 		size:  len(byteArray),
 		bytes: byteArray,
@@ -439,6 +433,7 @@ func editorAppendRow(byteArray []byte) {
 
 	E.row = append(E.row, r)
 	E.numRows++
+	E.dirty++
 }
 
 func editorRowsToString() string {
@@ -460,4 +455,23 @@ func insert(a []byte, index int, value byte) []byte {
 	a = append(a[:index+1], a[index:]...) // index < len(a)
 	a[index] = value
 	return a
+}
+
+func getStatusBarMsgLeft() string {
+	statusBarMsgLeft := ""
+	if E.fileName == "" {
+		if E.dirty == 0 {
+			statusBarMsgLeft = fmt.Sprintf("%.20s - %d lines %s", "[No Name]", E.numRows, "")
+
+		} else {
+			statusBarMsgLeft = fmt.Sprintf("%.20s - %d lines %s", "[No Name]", E.numRows, "(modified)")
+		}
+	} else {
+		if E.dirty == 0 {
+			statusBarMsgLeft = fmt.Sprintf("%.20s - %d lines %s", E.fileName, E.numRows, "")
+		} else {
+			statusBarMsgLeft = fmt.Sprintf("%.20s - %d lines %s", E.fileName, E.numRows, "(modified)")
+		}
+	}
+	return statusBarMsgLeft
 }

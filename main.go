@@ -23,6 +23,7 @@ type EditorConfig struct {
 	screenCols    int
 	numRows       int
 	row           []Erow
+	dirty         int
 	fileName      string
 	statusMsg     string
 	statusMsgTime time.Time
@@ -45,6 +46,7 @@ func init() {
 	E.rowOff = 0
 	E.colOff = 0
 	E.numRows = 0
+	E.dirty = 0
 	E.row = nil
 	E.fileName = ""
 	E.statusMsg = ""

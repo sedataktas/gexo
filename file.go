@@ -22,6 +22,7 @@ func editorOpen(fileName string) {
 			editorAppendRow(byteArray)
 		}
 	}
+	E.dirty = 0
 }
 
 func fileSave() {
@@ -37,5 +38,6 @@ func fileSave() {
 		panic(err)
 	}
 
+	E.dirty = 0
 	editorSetStatusMessage(fmt.Sprintf("%d bytes written to disk", len(str)))
 }
