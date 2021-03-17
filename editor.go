@@ -23,9 +23,13 @@ const (
 	DeleteKEy
 )
 
-const version = "0.0.1"
+const (
+	version      = "0.0.1"
+	minQuitTimes = 3
+)
 
 var buf []byte
+var quitTimes = minQuitTimes
 
 func editorReadKey(reader *bufio.Reader) int {
 	// read one byte
@@ -109,6 +113,12 @@ func editorProcessKeypress(c int) {
 		/* TODO */
 		break
 	case ctrlKey('q'):
+		if E.dirty != 0 && quitTimes > 0 {
+			editorSetStatusMessage("WARNING!!! File has unsaved changes. " +
+				"Press Ctrl-Q %d more times to quit.")
+			quitTimes--
+			return
+		}
 		clearEntireScreen()
 		getCursorToBegin()
 		disableRawMode()
@@ -166,6 +176,7 @@ func editorProcessKeypress(c int) {
 		editorInsertChar(c)
 		break
 	}
+	quitTimes = minQuitTimes
 }
 
 func editorRefreshScreen() {
