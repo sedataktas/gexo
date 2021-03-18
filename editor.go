@@ -164,10 +164,11 @@ func editorProcessKeypress(c int) {
 	case EndKey:
 		E.cx = E.screenCols - 1
 		break
-	case BackSpace:
-	case ctrlKey('h'):
-	case DeleteKEy:
-		/* TODO */
+	case BackSpace, ctrlKey('h'), DeleteKEy:
+		if c == DeleteKEy {
+			editorMoveCursor(ArrowRight)
+		}
+		editorDelChar()
 		break
 	case ctrlKey('l'):
 	case '\x1b':
@@ -416,6 +417,36 @@ func editorSetStatusMessage(str ...string) {
 	E.statusMsgTime = time.Now()
 }
 
+func editorInsertChar(c int) {
+	if E.cy == E.numRows {
+		editorAppendRow([]byte(""))
+	}
+
+	editorRowInsertChar(&E.row[E.cy], E.cx, c)
+	E.cx++
+}
+
+func editorDelChar() {
+	if E.cy == E.numRows {
+		return
+	}
+
+	if E.cx > 0 {
+		editorRowDelChar(&E.row[E.cy], E.cx-1)
+		E.cx--
+	}
+}
+
+func editorRowDelChar(row *Erow, at int) {
+	if at < 0 || at >= row.size {
+		return
+	}
+
+	row.size--
+	row.bytes = remove(row.bytes, at)
+	E.dirty++
+}
+
 func editorRowInsertChar(row *Erow, at, c int) {
 	if at < 0 || at > row.size {
 		at = row.size
@@ -425,15 +456,6 @@ func editorRowInsertChar(row *Erow, at, c int) {
 	row.bytes = insert(row.bytes, at, byte(c))
 	E.dirty++
 	//row.bytes = append(row.bytes, byte(c))
-}
-
-func editorInsertChar(c int) {
-	if E.cy == E.numRows {
-		editorAppendRow([]byte(""))
-	}
-
-	editorRowInsertChar(&E.row[E.cy], E.cx, c)
-	E.cx++
 }
 
 func editorAppendRow(byteArray []byte) {
@@ -451,7 +473,6 @@ func editorRowsToString() string {
 	var buf string
 	for _, row := range E.row {
 		for _, r := range row.bytes {
-			fmt.Println(string(r))
 			buf += string(r)
 		}
 		buf += string('\n')
@@ -466,6 +487,10 @@ func insert(a []byte, index int, value byte) []byte {
 	a = append(a[:index+1], a[index:]...) // index < len(a)
 	a[index] = value
 	return a
+}
+
+func remove(slice []byte, s int) []byte {
+	return append(slice[:s], slice[s+1:]...)
 }
 
 func getStatusBarMsgLeft() string {
