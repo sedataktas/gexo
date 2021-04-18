@@ -431,10 +431,35 @@ func editorDelChar() {
 		return
 	}
 
+	if E.cx == 0 && E.cy == 0 {
+		return
+	}
 	if E.cx > 0 {
 		editorRowDelChar(&E.row[E.cy], E.cx-1)
 		E.cx--
+	} else {
+		E.cx = E.row[E.cy-1].size
+		editorRowAppendString(&E.row[E.cy-1], E.row[E.cy].bytes)
+		editorDelRow(E.cy)
+		E.cy--
 	}
+}
+
+func editorDelRow(at int) {
+	if at < 0 || at >= E.numRows {
+		return
+	}
+
+	E.row = append(E.row[:at], E.row[at+1:]...)
+
+	E.numRows--
+	E.dirty++
+}
+
+func editorRowAppendString(row *Erow, byteArray []byte) {
+	row.bytes = append(row.bytes, byteArray...)
+	row.size += len(byteArray)
+	E.dirty++
 }
 
 func editorRowDelChar(row *Erow, at int) {
