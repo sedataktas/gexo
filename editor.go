@@ -110,7 +110,7 @@ func editorReadKey(reader *bufio.Reader) int {
 func editorProcessKeypress(c int) {
 	switch c {
 	case '\r':
-		/* TODO */
+		editorInsertNewline()
 		break
 	case ctrlKey('q'):
 		if E.dirty != 0 && quitTimes > 0 {
@@ -419,7 +419,7 @@ func editorSetStatusMessage(str ...string) {
 
 func editorInsertChar(c int) {
 	if E.cy == E.numRows {
-		editorAppendRow([]byte(""))
+		editorInsertRow(E.numRows, []byte(""))
 	}
 
 	editorRowInsertChar(&E.row[E.cy], E.cx, c)
@@ -483,15 +483,39 @@ func editorRowInsertChar(row *Erow, at, c int) {
 	//row.bytes = append(row.bytes, byte(c))
 }
 
-func editorAppendRow(byteArray []byte) {
+func editorInsertRow(at int, byteArray []byte) {
+	if at < 0 || at > E.numRows {
+		return
+	}
+
 	r := Erow{
 		size:  len(byteArray),
 		bytes: byteArray,
 	}
 
-	E.row = append(E.row, r)
+	if len(E.row)-1 <= at {
+		E.row = append(E.row, r)
+	} else {
+		E.row = insertRow(E.row, at, r)
+	}
+
 	E.numRows++
 	E.dirty++
+}
+
+func editorInsertNewline() {
+	if E.cx == 0 {
+		editorInsertRow(E.cy, []byte(""))
+	} else {
+		row := &E.row[E.cy]
+		editorInsertRow(E.cy+1, row.bytes[E.cx:])
+		row = &E.row[E.cy]
+		row.size = E.cx
+		E.row = append(E.row, *row)
+	}
+
+	E.cy++
+	E.cx = 0
 }
 
 func editorRowsToString() string {
@@ -512,6 +536,15 @@ func insert(a []byte, index int, value byte) []byte {
 	a = append(a[:index+1], a[index:]...) // index < len(a)
 	a[index] = value
 	return a
+}
+
+func insertRow(rows []Erow, index int, row Erow) []Erow {
+	if len(rows) == index { // nil or empty slice or after last element
+		return append(rows, row)
+	}
+	rows = append(rows[:index+1], rows[index:]...) // index < len(a)
+	rows[index] = row
+	return rows
 }
 
 func remove(slice []byte, s int) []byte {

@@ -19,7 +19,7 @@ func editorOpen(fileName string) {
 		t := scanner.Text()
 		if t != "" {
 			byteArray := []byte(t)
-			editorAppendRow(byteArray)
+			editorInsertRow(E.numRows, byteArray)
 		}
 	}
 	E.dirty = 0
