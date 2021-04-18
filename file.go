@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"unicode"
 )
 
 func editorOpen(fileName string) {
@@ -27,7 +28,11 @@ func editorOpen(fileName string) {
 
 func fileSave() {
 	if E.fileName == "" {
-		return
+		E.fileName = string(editorPrompt("Save as: %s (ESC to cancel)"))
+		if E.fileName == "" {
+			editorSetStatusMessage("Save aborted")
+			return
+		}
 	}
 
 	str := editorRowsToString()
@@ -40,4 +45,37 @@ func fileSave() {
 
 	E.dirty = 0
 	editorSetStatusMessage(fmt.Sprintf("%d bytes written to disk", len(str)))
+}
+
+func editorPrompt(prompt string) []byte {
+	bufSize := 128
+	var buf []byte
+
+	for {
+		editorSetStatusMessage(fmt.Sprintf(prompt, buf))
+		editorRefreshScreen()
+
+		c := editorReadKey(bufio.NewReader(os.Stdin))
+		if c == DeleteKEy ||
+			c == ctrlKey('h') ||
+			c == BackSpace {
+			if len(buf) != 0 {
+				buf = buf[:len(buf)-1]
+			}
+		} else if c == '\x1b' {
+			editorSetStatusMessage("")
+			buf = nil
+			return nil
+		} else if c == '\r' {
+			if len(buf) != 0 {
+				editorSetStatusMessage("")
+				return buf
+			}
+		} else if !unicode.IsControl(rune(c)) && c < 128 {
+			if len(buf) == bufSize-1 {
+				bufSize *= 2
+			}
+			buf = append(buf, byte(c))
+		}
+	}
 }
