@@ -170,6 +170,9 @@ func editorProcessKeypress(c int) {
 		}
 		editorDelChar()
 		break
+	case ctrlKey('f'):
+		editorFind()
+		break
 	case ctrlKey('l'):
 	case '\x1b':
 		break

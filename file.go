@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"unicode"
 )
 
@@ -76,6 +77,23 @@ func editorPrompt(prompt string) []byte {
 				bufSize *= 2
 			}
 			buf = append(buf, byte(c))
+		}
+	}
+}
+
+func editorFind() {
+	query := editorPrompt("Search: %s (ESC to cancel)")
+	if query == nil {
+		return
+	}
+
+	for i := 0; i < E.numRows; i++ {
+		matchedIndex := strings.Index(string(E.row[i].bytes), string(query))
+		if matchedIndex != -1 {
+			E.cy = i
+			E.cx = matchedIndex
+			E.rowOff = E.numRows
+			break
 		}
 	}
 }
