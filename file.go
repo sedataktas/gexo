@@ -98,6 +98,11 @@ func editorFind() {
 			E.cy = i
 			E.cx = matchedIndex
 			E.rowOff = E.numRows
+
+			for _, _ = range query {
+				E.row[i].highlights = insert(E.row[i].highlights, matchedIndex, byte(HlMatch))
+				matchedIndex++
+			}
 			break
 		}
 	}

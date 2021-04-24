@@ -27,6 +27,7 @@ const (
 const (
 	HlNormal int = iota
 	HlNumber
+	HlMatch
 )
 
 const (
@@ -576,6 +577,8 @@ func syntaxToColor(hl int) int {
 	switch hl {
 	case HlNumber:
 		return 31 // foreground red
+	case HlMatch:
+		return 34
 	default:
 		return 37 // foreground white
 	}
