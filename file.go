@@ -24,6 +24,7 @@ func editorOpen(fileName string) {
 			editorInsertRow(E.numRows, byteArray)
 		}
 	}
+
 	E.dirty = 0
 }
 
@@ -86,6 +87,10 @@ func editorFind() {
 	if query == nil {
 		return
 	}
+
+	// TODO : buraya esc tuşuna basılmadığı müddetce ve enter tuşuna basıldıktan
+	// sonra da devam edecek bir mantık yazılmalı
+	// yukarı aşağı tuşlarıyla bir sonraki aramanın yapılabilmesi için
 
 	for i := 0; i < E.numRows; i++ {
 		matchedIndex := strings.Index(string(E.row[i].bytes), string(query))

@@ -10,8 +10,9 @@ import (
 // Erow stands for “editor row”,
 //and stores a line of text as a pointer to character data and a length
 type Erow struct {
-	size  int
-	bytes []byte
+	size       int
+	bytes      []byte
+	highlights []byte
 }
 
 type EditorConfig struct {

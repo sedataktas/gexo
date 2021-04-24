@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"time"
+	"unicode"
 )
 
 const (
@@ -21,6 +22,11 @@ const (
 	HomeKey
 	EndKey
 	DeleteKEy
+)
+
+const (
+	HlNormal int = iota
+	HlNumber
 )
 
 const (
@@ -269,9 +275,28 @@ func editorDrawRows() {
 				len = E.screenCols
 			}
 
+			currentColor := -1
 			for i := 0; i < len; i++ {
-				t := E
-				buf = append(buf, t.row[fileRow].bytes[i])
+				if E.row[fileRow].highlights[i] == byte(HlNormal) {
+					if currentColor != -1 {
+						// 39 is reset color
+						// more information : https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
+						buf = append(buf, []byte("\x1b[39m")...)
+						currentColor = -1
+					}
+					buf = append(buf, E.row[fileRow].bytes[i])
+				} else {
+					color := syntaxToColor(int(E.row[fileRow].highlights[i]))
+					if color != currentColor {
+						colorFmt := fmt.Sprintf("\x1b[%dm", color)
+						buf = append(buf, []byte(colorFmt)...)
+
+						// 31 is red
+						//buf = append(buf, []byte("\x1b[31m")...)
+					}
+					buf = append(buf, E.row[fileRow].bytes[i])
+				}
+				buf = append(buf, []byte("\x1b[39m")...)
 			}
 		}
 
@@ -413,7 +438,6 @@ func editorSetStatusMessage(str ...string) {
 
 	for _, s := range str {
 		buffer.WriteString(s)
-		buffer.WriteString(",")
 	}
 
 	E.statusMsg = buffer.String()
@@ -426,6 +450,7 @@ func editorInsertChar(c int) {
 	}
 
 	editorRowInsertChar(&E.row[E.cy], E.cx, c)
+	//editorUpdateSyntax(&E.row[E.cy])
 	E.cx++
 }
 
@@ -463,6 +488,7 @@ func editorRowAppendString(row *Erow, byteArray []byte) {
 	row.bytes = append(row.bytes, byteArray...)
 	row.size += len(byteArray)
 	E.dirty++
+	editorUpdateSyntax(row)
 }
 
 func editorRowDelChar(row *Erow, at int) {
@@ -473,6 +499,7 @@ func editorRowDelChar(row *Erow, at int) {
 	row.size--
 	row.bytes = remove(row.bytes, at)
 	E.dirty++
+	editorUpdateSyntax(row)
 }
 
 func editorRowInsertChar(row *Erow, at, c int) {
@@ -482,6 +509,7 @@ func editorRowInsertChar(row *Erow, at, c int) {
 
 	row.size++
 	row.bytes = insert(row.bytes, at, byte(c))
+	row.highlights = insertHighlightSyntax(row.highlights, at, byte(c))
 	E.dirty++
 	//row.bytes = append(row.bytes, byte(c))
 }
@@ -492,9 +520,11 @@ func editorInsertRow(at int, byteArray []byte) {
 	}
 
 	r := Erow{
-		size:  len(byteArray),
-		bytes: byteArray,
+		size:       len(byteArray),
+		bytes:      byteArray,
+		highlights: nil,
 	}
+	editorUpdateSyntax(&r)
 
 	if len(E.row)-1 <= at {
 		E.row = append(E.row, r)
@@ -532,12 +562,47 @@ func editorRowsToString() string {
 	return buf
 }
 
+func editorUpdateSyntax(row *Erow) {
+	for _, b := range row.bytes {
+		if unicode.IsDigit(rune(b)) {
+			row.highlights = append(row.highlights, byte(HlNumber))
+		} else {
+			row.highlights = append(row.highlights, byte(HlNormal))
+		}
+	}
+}
+
+func syntaxToColor(hl int) int {
+	switch hl {
+	case HlNumber:
+		return 31 // foreground red
+	default:
+		return 37 // foreground white
+	}
+}
+
 func insert(a []byte, index int, value byte) []byte {
 	if len(a) == index { // nil or empty slice or after last element
 		return append(a, value)
 	}
 	a = append(a[:index+1], a[index:]...) // index < len(a)
 	a[index] = value
+	return a
+}
+
+func insertHighlightSyntax(a []byte, index int, value byte) []byte {
+	color := -1
+	if unicode.IsDigit(rune(value)) {
+		color = HlNumber
+	} else {
+		color = HlNormal
+	}
+
+	if len(a) == index { // nil or empty slice or after last element
+		return append(a, byte(color))
+	}
+	a = append(a[:index+1], a[index:]...) // index < len(a)
+	a[index] = byte(color)
 	return a
 }
 
