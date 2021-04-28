@@ -118,11 +118,10 @@ func editorProcessKeypress(c int) {
 	switch c {
 	case '\r':
 		editorInsertNewline()
-		break
 	case ctrlKey('q'):
 		if E.dirty != 0 && quitTimes > 0 {
-			editorSetStatusMessage("WARNING!!! File has unsaved changes. " +
-				"Press Ctrl-Q %d more times to quit.")
+			editorSetStatusMessage(fmt.Sprintf("WARNING!!! File has unsaved changes. "+
+				"Press Ctrl-Q %d more times to quit.", quitTimes))
 			quitTimes--
 			return
 		}
@@ -132,10 +131,8 @@ func editorProcessKeypress(c int) {
 		os.Exit(1)
 	case ctrlKey('s'):
 		fileSave()
-		break
 	case ArrowUp, ArrowDown, ArrowLeft, ArrowRight:
 		editorMoveCursor(c)
-		break
 		/*
 			case PageDown:
 				for i := 0; i < E.screenRows; i++ {
@@ -164,28 +161,21 @@ func editorProcessKeypress(c int) {
 				editorMoveCursor(ArrowDown)
 			}
 		}
-		break
 	case HomeKey:
 		E.cx = 0
-		break
 	case EndKey:
 		E.cx = E.screenCols - 1
-		break
 	case BackSpace, ctrlKey('h'), DeleteKEy:
 		if c == DeleteKEy {
 			editorMoveCursor(ArrowRight)
 		}
 		editorDelChar()
-		break
 	case ctrlKey('f'):
 		editorFind()
-		break
 	case ctrlKey('l'):
 	case '\x1b':
-		break
 	default:
 		editorInsertChar(c)
-		break
 	}
 	quitTimes = minQuitTimes
 }
@@ -328,7 +318,6 @@ func editorMoveCursor(key int) {
 			E.cy--
 			E.cx = E.row[E.cy].size
 		}
-		break
 	case ArrowRight:
 		if row != nil && E.cx < row.size {
 			E.cx++
@@ -336,17 +325,14 @@ func editorMoveCursor(key int) {
 			E.cy++
 			E.cx = 0
 		}
-		break
 	case ArrowUp:
 		if E.cy != 0 {
 			E.cy--
 		}
-		break
 	case ArrowDown:
 		if E.cy < E.numRows {
 			E.cy++
 		}
-		break
 	}
 
 	if E.cy >= E.numRows {
@@ -428,7 +414,7 @@ func editorDrawMessageBar() {
 		msgLen = E.screenCols
 	}
 
-	t := time.Now().Sub(E.statusMsgTime).Seconds()
+	t := time.Since(E.statusMsgTime).Seconds()
 	if msgLen != 0 && t < 5 {
 		buf = append(buf, E.statusMsg...)
 	}

@@ -10,10 +10,24 @@ import (
 )
 
 func editorOpen(fileName string) {
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	path := wd + string(os.PathSeparator) + fileName
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		_, err := os.Create(path)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	f, err := os.Open(fileName)
 	if err != nil {
 		panic(err)
 	}
+
 	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
@@ -99,7 +113,7 @@ func editorFind() {
 			E.cx = matchedIndex
 			E.rowOff = E.numRows
 
-			for _, _ = range query {
+			for range query {
 				E.row[i].highlights = insert(E.row[i].highlights, matchedIndex, byte(HlMatch))
 				matchedIndex++
 			}
